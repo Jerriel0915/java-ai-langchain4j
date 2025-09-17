@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>法律小助手</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            font-family: "Microsoft YaHei", sans-serif;
+            display: flex;
+            height: 100vh;
+            background-color: #eef2f7;
+        }
+        .sidebar {
+            width: 260px;
+            background-color: #2c3e50;
+            color: white;
+            padding: 30px 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        .sidebar h2 {
+            font-size: 22px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #7f8c8d;
+            padding-bottom: 10px;
+        }
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+        .sidebar li {
+            margin-bottom: 18px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background-color: #34495e;
+            transition: background-color 0.3s;
+            cursor: pointer;
+        }
+        .sidebar li:hover {
+            background-color: #3d566e;
+        }
+
+        .chat-window {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .chat-box {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+            margin-bottom: 15px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 14px 18px;
+            border-radius: 18px;
+            max-width: 70%;
+            line-height: 1.6;
+            font-size: 15px;
+            word-break: break-word;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .bot {
+            background-color: #ffffff;
+            align-self: flex-start;
+            border: 1px solid #dfe6e9;
+        }
+
+        .user {
+            background-color: #d1ecf1;
+            align-self: flex-end;
+            border: 1px solid #bee5eb;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            background-color: #fff;
+            transition: border-color 0.3s;
+        }
+
+        .input-area input:focus {
+            outline: none;
+            border-color: #0984e3;
+        }
+
+        .input-area button {
+            padding: 12px 20px;
+            background-color: #0984e3;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .input-area button:hover {
+            background-color: #74b9ff;
+        }
+
+        /* 滚动条美化 */
+        .chat-box::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-box::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .chat-box::-webkit-scrollbar-thumb {
+            background-color: #ccc;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+<div class="sidebar">
+    <h2>法律写作训练</h2>
+    <ul>
+        <li>我是新用户法律写作训练</li>
+        <li>我是熟悉与试收（法律文书）</li>
+        <li>我是老用户法律写作训练</li>
+    </ul>
+</div>
+
+<div class="chat-window">
+    <div class="chat-box" id="chatBox">
+        <div class="message bot">您好呀！我是您的法律小助手⚖️～<br>为什么您觉得写不出法律文书呢？比如合同条款、法律意见书、或者相关法规内容，都可以用来参考哦！您可以试着写写看，我可以帮您修改哒！😊</div>
+    </div>
+    <div class="input-area">
+        <input type="text" id="userInput" placeholder="请输入您的问题或草稿...">
+        <button onclick="sendMessage()">发送</button>
+    </div>
+</div>
+
+<script>
+    let messageCount = 1;
+
+    function sendMessage() {
+        const input = document.getElementById("userInput");
+        const chatBox = document.getElementById("chatBox");
+        const userText = input.value.trim();
+        if (userText === "") return;
+
+        const userMessage = document.createElement("div");
+        userMessage.className = "message user";
+        userMessage.textContent = userText;
+        chatBox.appendChild(userMessage);
+
+        const payload = {
+            //memoryId: messageCount++,
+            memoryId:messageCount,
+            message: userText
+        };
+
+        fetch("http://localhost:8081/xiaozhi/chat", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(payload)
+        })
+            .then(response => response.text())
+            .then(text => {
+                const botMessage = document.createElement("div");
+                botMessage.className = "message bot";
+                botMessage.innerHTML = text;
+                chatBox.appendChild(botMessage);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            })
+            .catch(error => {
+                const errorMessage = document.createElement("div");
+                errorMessage.className = "message bot";
+                errorMessage.innerHTML = "⚠️ 请求失败：" + error.message;
+                chatBox.appendChild(errorMessage);
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
+
+        input.value = "";
+    }
+</script>
+</body>
+</html>
