@@ -10,13 +10,15 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class XiaozhiAgentConfig {
 
-         @Autowired
- private MongoChatMemoryStore mongoChatMemoryStore;
-         @Bean
- ChatMemoryProvider chatMemoryProviderXiaozhi() {
- return memoryId -> MessageWindowChatMemory.builder()
-   .id(memoryId)
-   .maxMessages(20)
-   .chatMemoryStore(mongoChatMemoryStore)
-   .build();}
+    @Autowired
+    private MongoChatMemoryStore mongoChatMemoryStore;
+
+    @Bean
+    ChatMemoryProvider chatMemoryProviderXiaozhi() {
+        return memoryId -> MessageWindowChatMemory.builder()
+                .id(memoryId)
+                .maxMessages(20)
+                .chatMemoryStore(mongoChatMemoryStore)
+                .build();
+    }
 }

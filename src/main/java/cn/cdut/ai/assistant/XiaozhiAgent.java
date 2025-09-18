@@ -8,6 +8,7 @@ import dev.langchain4j.service.spring.AiService;
 import static dev.langchain4j.service.spring.AiServiceWiringMode.EXPLICIT;
 
 @AiService(
+        tools = "appointmentTools",
         wiringMode = EXPLICIT,
         chatModel = "qwenChatModel",
         chatMemoryProvider = "chatMemoryProviderXiaozhi")

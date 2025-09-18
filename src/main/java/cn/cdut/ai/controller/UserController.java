@@ -56,49 +56,8 @@ public class UserController {
     @PostMapping("/register")
     public Result<String> register(@RequestBody UserLoginDto userLoginDto) {
         log.info("userRegister:{}", userLoginDto);
-
-        try {
-            // 参数校验
-            if (userLoginDto == null ||
-                    userLoginDto.getUsername() == null ||
-                    userLoginDto.getPassword() == null) {
-                return Result.error("用户名和密码不能为空");
-            }
-
-            // 检查用户名是否已存在
-            User existingUser = userService.getOne(
-                    new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<User>()
-                            .eq("username", userLoginDto.getUsername())
-            );
-
-            if (existingUser != null) {
-                log.warn("用户名已存在: {}", userLoginDto.getUsername());
-                return Result.error("用户名已存在");
-            }
-
-            // 创建新用户（让数据库自动生成ID，不需要手动设置）
-            User newUser = new User();
-            newUser.setUsername(userLoginDto.getUsername());
-            // 使用BCrypt对密码进行加密
-            String encodedPassword = BCryptUtil.encode(userLoginDto.getPassword());
-            newUser.setPassword(encodedPassword);
-
-            log.info("准备保存新用户: {}", newUser.getUsername());
-
-            // 保存用户到数据库
-            boolean saved = userService.save(newUser);
-
-            log.info("用户保存结果: {}", saved);
-
-            if (saved) {
-                return Result.success("注册成功");
-            } else {
-                return Result.error("注册失败");
-            }
-        } catch (Exception e) {
-            log.error("注册过程中发生异常: ", e);
-            return Result.error("注册失败: " + e.getMessage());
-        }
+        userService.register(userLoginDto);
+        return Result.success("注册成功");
     }
 
 

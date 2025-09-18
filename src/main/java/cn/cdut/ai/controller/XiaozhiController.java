@@ -71,7 +71,6 @@ public class XiaozhiController {
     }
 
 
-
     // 首页访问：转发到 index.html
     @GetMapping("/")
     public String index() {
