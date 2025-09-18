@@ -11,9 +11,10 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Component;
+import java.util.*;
 
-import java.util.LinkedList;
-import java.util.List;
+
+import javax.annotation.PostConstruct;
 
 @Component
 public class MongoChatMemoryStore implements ChatMemoryStore {
@@ -21,9 +22,26 @@ public class MongoChatMemoryStore implements ChatMemoryStore {
     @Autowired
     private MongoTemplate mongoTemplate;
 
+    // 应用启动时执行初始化操作
+    @PostConstruct
+    public void init() {
+        // 清除临时用户（ID为999999999）的聊天记录
+        deleteTemporaryUserData();
+    }
+
+    // 清除临时用户数据的方法
+    public void deleteTemporaryUserData() {
+        // 删除userId为999999999的记录
+        Criteria criteria = Criteria.where("userId").is(999999999L);
+        Query query = new Query(criteria);
+        mongoTemplate.remove(query, ChatMessages.class);
+        System.out.println("已清除临时用户(999999999)的聊天记录");
+    }
+
     @Override
     public List<ChatMessage> getMessages(Object memoryId) {
-        Criteria criteria = Criteria.where("memoryId").is(memoryId);
+        // 使用userId来查询对应用户的聊天记录
+        Criteria criteria = Criteria.where("userId").is(memoryId);
         Query query = new Query(criteria);
         ChatMessages chatMessages = mongoTemplate.findOne(query, ChatMessages.class);
         if(chatMessages == null)
@@ -34,17 +52,20 @@ public class MongoChatMemoryStore implements ChatMemoryStore {
 
     @Override
     public void updateMessages(Object memoryId, List<ChatMessage> messages) {
-        Criteria criteria = Criteria.where("memoryId").is(memoryId);
+        // 使用userId来存储对应用户的聊天记录
+        Criteria criteria = Criteria.where("userId").is(memoryId);
         Query query = new Query(criteria);
         Update update = new Update();
         update.set("content", ChatMessageSerializer.messagesToJson(messages));
-        //根据query条件能查询出文档，则修改文档；否则新增文档
+        update.set("userId", memoryId); // 设置用户ID
+        // 根据userId来更新或插入文档
         mongoTemplate.upsert(query, update, ChatMessages.class);
     }
 
     @Override
     public void deleteMessages(Object memoryId) {
-        Criteria criteria = Criteria.where("memoryId").is(memoryId);
+        // 使用userId来删除对应用户的聊天记录
+        Criteria criteria = Criteria.where("userId").is(memoryId);
         Query query = new Query(criteria);
         mongoTemplate.remove(query, ChatMessages.class);
     }

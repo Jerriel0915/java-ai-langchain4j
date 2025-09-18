@@ -20,6 +20,7 @@
             color: white;
             padding: 30px 20px;
             box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            position: relative;
         }
         .sidebar h2 {
             font-size: 22px;
@@ -115,6 +116,11 @@
             background-color: #74b9ff;
         }
 
+        .input-area button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
         /* 滚动条美化 */
         .chat-box::-webkit-scrollbar {
             width: 6px;
@@ -126,16 +132,120 @@
             background-color: #ccc;
             border-radius: 3px;
         }
+
+        /* 头像图标样式 */
+        .avatar-container {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #3498db;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+
+        .avatar-container:hover {
+            transform: scale(1.1);
+        }
+
+        .avatar-icon {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        /* 隐藏元素的类 */
+        .hidden {
+            display: none;
+        }
+
+        /* 提示信息样式 */
+        .alert {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 20px;
+            border-radius: 5px;
+            color: white;
+            font-weight: bold;
+            z-index: 10000;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .alert-success {
+            background-color: #28a745;
+        }
+
+        .alert-info {
+            background-color: #17a2b8;
+        }
+
+        .alert-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+        /* 退出登录按钮样式 */
+        .logout-btn {
+            position: absolute;
+            bottom: 90px;
+            left: 20px;
+            width: calc(100% - 40px);
+            padding: 10px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            display: none;
+        }
+
+        .logout-btn:hover {
+            background-color: #c0392b;
+        }
+
+        /* 打字机效果光标 */
+        .typing-cursor {
+            display: inline-block;
+            width: 3px;
+            height: 16px;
+            background-color: #333;
+            margin-left: 2px;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
     </style>
 </head>
 <body>
 <div class="sidebar">
     <h2>法律写作训练</h2>
-    <ul>
+    <ul id="chatHistory" class="hidden">
         <li>我是新用户法律写作训练</li>
         <li>我是熟悉与试收（法律文书）</li>
         <li>我是老用户法律写作训练</li>
     </ul>
+
+    <!-- 退出登录按钮 -->
+    <button id="logoutBtn" class="logout-btn" onclick="logout()">退出登录</button>
+
+    <!-- 头像图标，点击跳转到登录页面 -->
+    <div class="avatar-container" onclick="goToLogin()">
+        <div class="avatar-icon">👤</div>
+    </div>
 </div>
 
 <div class="chat-window">
@@ -144,55 +254,218 @@
     </div>
     <div class="input-area">
         <input type="text" id="userInput" placeholder="请输入您的问题或草稿...">
-        <button onclick="sendMessage()">发送</button>
+        <button id="sendBtn" onclick="sendMessage()">发送</button>
     </div>
 </div>
 
 <script>
-    let messageCount = 1;
+    // 初始化 messageCount，未登录时使用一个较大的值
+    let messageCount = 999999999;
+    let currentBotMessage = null; // 当前正在接收流式输出的bot消息元素
+    let currentBotText = ''; // 当前bot消息的完整文本
 
-    function sendMessage() {
+    // 页面加载时检查用户登录状态
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeApp();
+    });
+
+    function initializeApp() {
+        // 检查用户登录状态并设置 messageCount
+        checkLoginStatus();
+
+        // 显示聊天记录（如果用户已登录）
+        const chatHistory = document.getElementById('chatHistory');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const token = localStorage.getItem('token');
+
+        if (token) {
+            chatHistory.classList.remove('hidden');
+            logoutBtn.style.display = 'block'; // 显示退出登录按钮
+        } else {
+            logoutBtn.style.display = 'none'; // 隐藏退出登录按钮
+        }
+    }
+
+    function checkLoginStatus() {
+        // 获取localStorage中的值
+        const token = localStorage.getItem('token');
+        const userId = localStorage.getItem('userId');
+        const username = localStorage.getItem('username');
+
+        if (token && userId) {
+            // 用户已登录，将 messageCount 设置为用户ID
+            messageCount = parseInt(userId);
+        } else {
+            // 用户未登录，使用一个较大的默认值
+            messageCount = 999999999;
+        }
+
+        return { token, userId, username };
+    }
+
+    async function sendMessage() {
         const input = document.getElementById("userInput");
         const chatBox = document.getElementById("chatBox");
+        const sendBtn = document.getElementById("sendBtn");
         const userText = input.value.trim();
+
         if (userText === "") return;
 
+        // 禁用发送按钮和输入框
+        sendBtn.disabled = true;
+        input.disabled = true;
+        input.value = "";
+
+        // 添加用户消息到聊天框
         const userMessage = document.createElement("div");
         userMessage.className = "message user";
         userMessage.textContent = userText;
         chatBox.appendChild(userMessage);
 
-        const payload = {
-            //memoryId: messageCount++,
-            memoryId:messageCount,
-            message: userText
-        };
+        // 创建bot消息容器
+        let botMessage = document.createElement("div");
+        botMessage.className = "message bot";
+        let botText = '';
+        chatBox.appendChild(botMessage);
 
-        fetch("http://localhost:8081/xiaozhi/chat", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload)
-        })
-            .then(response => response.text())
-            .then(text => {
-                const botMessage = document.createElement("div");
-                botMessage.className = "message bot";
-                botMessage.innerHTML = text;
-                chatBox.appendChild(botMessage);
+        // 滚动到底部
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            // 检查登录状态
+            const loginStatus = checkLoginStatus();
+
+            // 使用SSE连接实现流式输出
+            const eventSource = new EventSource(`http://localhost:8081/xiaozhi/chat/stream?memoryId=${messageCount}&message=${encodeURIComponent(userText)}`);
+
+            eventSource.onmessage = function(event) {
+                // 更新bot消息内容
+                botText += event.data;
+                // 正确处理HTML内容
+                botMessage.innerHTML = formatMessage(botText) + '<span class="typing-cursor"></span>';
+
+                // 滚动到底部
                 chatBox.scrollTop = chatBox.scrollHeight;
-            })
-            .catch(error => {
-                const errorMessage = document.createElement("div");
-                errorMessage.className = "message bot";
-                errorMessage.innerHTML = "⚠️ 请求失败：" + error.message;
-                chatBox.appendChild(errorMessage);
-                chatBox.scrollTop = chatBox.scrollHeight;
+            };
+
+            eventSource.onerror = function(err) {
+                console.error('EventSource failed:', err);
+                if (botText === '') {
+                    botMessage.innerHTML = "⚠️ 请求失败";
+                } else {
+                    // 移除光标，完成消息显示
+                    botMessage.innerHTML = formatMessage(botText);
+                }
+                eventSource.close();
+                // 重新启用发送按钮和输入框
+                sendBtn.disabled = false;
+                input.disabled = false;
+                input.focus();
+            };
+
+            eventSource.addEventListener('end', function() {
+                // 完成消息显示，移除光标
+                botMessage.innerHTML = formatMessage(botText);
+                eventSource.close();
+                // 重新启用发送按钮和输入框
+                sendBtn.disabled = false;
+                input.disabled = false;
+                input.focus();
             });
 
-        input.value = "";
+        } catch (error) {
+            console.error('Error:', error);
+            if (botMessage && botText === '') {
+                botMessage.innerHTML = "⚠️ 请求失败：" + error.message;
+            }
+            // 重新启用发送按钮和输入框
+            sendBtn.disabled = false;
+            input.disabled = false;
+            input.focus();
+        }
     }
+
+    // 格式化消息内容，正确处理HTML标签和特殊字符
+    function formatMessage(text) {
+        // 转换换行符为<br>标签
+        let formatted = text.replace(/\n/g, '<br>');
+        // 处理表情符号占位符（如果有的话）
+        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        return formatted;
+    }
+
+
+
+
+    // 显示提示信息的函数
+    function showAlert(message, type = 'info') {
+        // 移除已存在的提示
+        const existingAlert = document.querySelector('.alert');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+
+        // 创建新的提示元素
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.textContent = message;
+        document.body.appendChild(alert);
+
+        // 3秒后自动移除
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.parentNode.removeChild(alert);
+            }
+        }, 3000);
+    }
+
+    // 跳转到登录页面的函数
+    function goToLogin() {
+        // 检查登录状态
+        const loginStatus = checkLoginStatus();
+
+        if (loginStatus.token && loginStatus.userId) {
+            // 用户已登录，显示提示信息
+            showAlert('您已登录，无需跳转到登录页面', 'success');
+        } else {
+            // 用户未登录，跳转到登录页面
+            window.location.href = '/login.html';
+        }
+    }
+
+    // 退出登录函数
+    function logout() {
+        // 确认是否退出登录
+        if (confirm('确定要退出登录吗？')) {
+            // 清除localStorage中的用户信息
+            localStorage.removeItem('token');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('username');
+
+            // 将messageCount重置为默认值
+            messageCount = 999999999;
+
+            // 隐藏聊天记录和退出按钮
+            document.getElementById('chatHistory').classList.add('hidden');
+            document.getElementById('logoutBtn').style.display = 'none';
+
+            // 显示退出成功提示
+            showAlert('退出登录成功', 'success');
+
+            // 可选：刷新页面以确保状态完全重置
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        }
+    }
+
+    // 允许通过回车键发送消息
+    document.getElementById("userInput").addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            sendMessage();
+        }
+    });
 </script>
+
 </body>
 </html>

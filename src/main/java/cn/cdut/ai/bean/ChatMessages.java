@@ -16,6 +16,9 @@ public class ChatMessages {
     @Id
     private ObjectId messageId;
 
+    // 存储用户ID
+    private Long userId;
+
     //存储当前聊天记录列表的json字符串
     private String content;
 }

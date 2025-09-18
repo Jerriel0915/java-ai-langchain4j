@@ -6,7 +6,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://127.0.0.1:3306/aiproject
     username: root
-    password: 12345
+    password: DHY20050312@
   data:
     mongodb:
       uri: mongodb://localhost:27017/chat_memory_db
